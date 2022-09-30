@@ -156,7 +156,7 @@ If you want to give a bit more movement to your `Background` object without anim
 
 If you want to use one of these background movement options, add a backgroundMovement field to your song.tmb, similar to the `Adding the events to the chart` section.
 
-```json
+```
 ... "savednotespacing": 120, "endpoint": 643, "timesig": 2, "tempo": 100, "UNK1": 0, "bgdata": [...]} 
 // Before ^
 ... "savednotespacing": 120, "endpoint": 643, "timesig": 2, "tempo": 100, "UNK1": 0, "bgdata": [...], "backgroundMovement": "bouncefast"} 
