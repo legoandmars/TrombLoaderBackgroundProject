@@ -93,7 +93,7 @@ Open up your `song.tmb` file in your favorite text editor, and hit ctrl+f to see
 
 If you don't have one, you'll have to add one to the end of the file like this.
 
-```json
+```
 ... "savednotespacing": 120, "endpoint": 643, "timesig": 2, "tempo": 100, "UNK1": 0} 
 // Before ^
 ... "savednotespacing": 120, "endpoint": 643, "timesig": 2, "tempo": 100, "UNK1": 0, "bgdata": []} 
@@ -101,7 +101,7 @@ If you don't have one, you'll have to add one to the end of the file like this.
 ```
 
 Next, you'll need to create the event. Thankfully, the format is relatively simple.
-```json
+```
 [TimeInSeconds, EventID, TimeInBeats]
 // First number is always just the time in seconds
 // Second number is the Event ID you entered in the Unity Editor
@@ -117,7 +117,7 @@ Next, you'll need to create the event. Thankfully, the format is relatively simp
 There's very few limitations on what you can do - you can create multiple events with the same ID if you want to trigger it multiple times.
 
 Once you've put together your events, you need to put them into `bgdata`, seperated by a comma.
-```json
+```
 ... "savednotespacing": 120, "endpoint": 643, "timesig": 2, "tempo": 100, "UNK1": 0, "bgdata": []} 
 // Before ^
 ... "savednotespacing": 120, "endpoint": 643, "timesig": 2, "tempo": 100, "UNK1": 0, "bgdata": [[20.0, 1, 12.0], [30.5, 2, 18.3]]} 
