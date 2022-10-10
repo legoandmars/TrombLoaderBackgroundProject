@@ -336,6 +336,7 @@ GameObject:
   - component: {fileID: 1431029826}
   - component: {fileID: 1431029825}
   - component: {fileID: 1431029827}
+  - component: {fileID: 1431029828}
   m_Layer: 0
   m_Name: Template
   m_TagString: Untagged
@@ -431,13 +432,40 @@ MonoBehaviour:
       m_Calls: []
   MousePositionUpdated:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 302091631}
+        m_MethodName: 
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: 
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   serializedMousePositionJson: '{"m_PersistentCalls":{"m_Calls":[{"m_Target":{"instanceID":13174},"m_MethodName":"set_localPosition","m_Mode":0,"m_Arguments":{"m_ObjectArgument":{"instanceID":0},"m_ObjectArgumentAssemblyTypeName":"UnityEngine.Object,
     UnityEngine","m_IntArgument":0,"m_FloatArgument":0.0,"m_StringArgument":"","m_BoolArgument":false},"m_CallState":2}]}}'
   serializedMousePositionTargets:
   - {fileID: 0}
   serializedComboJson: 
   serializedComboTargets: []
+--- !u!114 &1431029828
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1431029824}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 602656630, guid: 48734c99c156e394d8970a5d01cda87f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  BackgroundEventID: 0
+  UnityEvent:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &1514166727
 GameObject:
   m_ObjectHideFlags: 0
