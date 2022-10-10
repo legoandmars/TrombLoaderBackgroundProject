@@ -28,47 +28,61 @@ namespace TrombLoader
                 BuildTargetGroup selectedBuildTargetGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
                 BuildTarget activeBuildTarget = EditorUserBuildSettings.activeBuildTarget;
 
-                if (!string.IsNullOrEmpty(path)) 
+                GameObject clonedTromboneBackground = null;
+
+                try
                 {
-                    // serialize
-                    foreach (var manager in tromboneBackground.gameObject.GetComponentsInChildren<TromboneEventManager>())
+                    if (!string.IsNullOrEmpty(path))
                     {
-                        manager.SerializeAllGenericEvents();
+                        clonedTromboneBackground = Instantiate(tromboneBackground.gameObject);
+
+                        // serialize
+                        foreach (var manager in clonedTromboneBackground.gameObject.GetComponentsInChildren<TromboneEventManager>())
+                        {
+                            manager.SerializeAllGenericEvents();
+                        }
+
+                        string fileName = Path.GetFileName(path);
+                        string folderPath = Path.GetDirectoryName(path);
+
+                        PrefabUtility.SaveAsPrefabAsset(clonedTromboneBackground.gameObject, "Assets/_Background.prefab");
+                        AssetBundleBuild assetBundleBuild = default;
+                        assetBundleBuild.assetBundleName = fileName;
+                        assetBundleBuild.assetNames = new string[] {"Assets/_Background.prefab"};
+
+                        BuildPipeline.BuildAssetBundles(Application.temporaryCachePath,
+                            new AssetBundleBuild[] {assetBundleBuild}, BuildAssetBundleOptions.ForceRebuildAssetBundle,
+                            EditorUserBuildSettings.activeBuildTarget);
+                        EditorPrefs.SetString("currentBuildingAssetBundlePath", folderPath);
+                        EditorUserBuildSettings.SwitchActiveBuildTarget(selectedBuildTargetGroup, activeBuildTarget);
+
+                        AssetDatabase.DeleteAsset("Assets/_Background.prefab");
+
+                        if (File.Exists(path))
+                            File.Delete(path);
+
+                        // Unity seems to save the file in lower case, which is a problem on Linux, as file systems are case sensitive there
+                        File.Move(Path.Combine(Application.temporaryCachePath, fileName.ToLowerInvariant()), path);
+
+                        AssetDatabase.Refresh();
+
+                        EditorUtility.DisplayDialog("Exportation Successful!", "Exportation Successful!", "OK");
+
+                        if (clonedTromboneBackground != null) DestroyImmediate(clonedTromboneBackground);
+
+                        GUIUtility.ExitGUI();
                     }
-                    
-                    string fileName = Path.GetFileName(path);
-                    string folderPath = Path.GetDirectoryName(path);
+                    else
+                    {
+                        EditorUtility.DisplayDialog("Exportation Failed!", "Path is invalid.", "OK");
 
-                    PrefabUtility.SaveAsPrefabAsset(tromboneBackground.gameObject, "Assets/_Background.prefab");
-                    AssetBundleBuild assetBundleBuild = default;
-                    assetBundleBuild.assetBundleName = fileName;
-                    assetBundleBuild.assetNames = new string[] { "Assets/_Background.prefab" };
-
-                    BuildPipeline.BuildAssetBundles(Application.temporaryCachePath, new AssetBundleBuild[] { assetBundleBuild }, BuildAssetBundleOptions.ForceRebuildAssetBundle, EditorUserBuildSettings.activeBuildTarget);
-                    EditorPrefs.SetString("currentBuildingAssetBundlePath", folderPath);
-                    EditorUserBuildSettings.SwitchActiveBuildTarget(selectedBuildTargetGroup, activeBuildTarget);
-
-                    AssetDatabase.DeleteAsset("Assets/_Background.prefab");
-
-                    if (File.Exists(path))
-                        File.Delete(path);
-
-                    // Unity seems to save the file in lower case, which is a problem on Linux, as file systems are case sensitive there
-                    File.Move(Path.Combine(Application.temporaryCachePath, fileName.ToLowerInvariant()), path);
-
-                    AssetDatabase.Refresh();
-
-                    EditorUtility.DisplayDialog("Exportation Successful!", "Exportation Successful!", "OK");
-                    
-                    GUIUtility.ExitGUI(); 
+                        GUIUtility.ExitGUI();
+                    }
                 }
-                else 
+                catch
                 {
-                    EditorUtility.DisplayDialog("Exportation Failed!", "Path is invalid.", "OK");
-                    
-                    GUIUtility.ExitGUI(); 
+                    if(clonedTromboneBackground != null) DestroyImmediate(clonedTromboneBackground);
                 }
-
             }
         }
     }
