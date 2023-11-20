@@ -3,11 +3,116 @@ using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 using UnityEngine.Video;
 using TrombLoader.Data;
+using UnityEditor.UIElements;
+using System;
 
 namespace TrombLoader 
 {
+    public class MacShaderPicker : EditorWindow
+    {
+        private Dictionary<Shader, bool> ShaderList = new Dictionary<Shader, bool>();
+        private string FolderPath;
+
+        Vector2 scrollPosition;
+
+        public void Init(List<Shader> shaders, string path)
+        {
+            ShaderList.Clear();
+            foreach (var shader in shaders)
+            {
+                // TODO: store the state in a file or something and load from that
+                ShaderList[shader] = true;
+            }
+            FolderPath = path;
+        }
+
+        public void OnGUI()
+        {
+            GUILayout.Label("Shaders to include:");
+
+            scrollPosition = GUILayout.BeginScrollView(scrollPosition);
+
+            for (int i = 0; i < ShaderList.Count; i++)
+            {
+                var shader = ShaderList.ElementAt(i).Key;
+                var active = ShaderList.ElementAt(i).Value;
+                ShaderList[shader] = GUILayout.Toggle(active, shader.name);
+            }
+
+            GUILayout.EndScrollView();
+
+            GUILayout.Box(
+                "To make sure your background appears correctly on macOS we need to build a bundle containing Mac-compatible shaders. " + 
+                "To save on disk space, you can exclude shaders you know you aren't using in your scene. " +
+                "If you're not sure what to exclude, you can just leave everything selected at the expense of a slightly larger shader bundle."
+            );
+
+            if (GUILayout.Button("Build Them Shaders!"))
+            {
+                this.Close();
+                BuildShaders();
+                EditorUtility.DisplayDialog("Exportation Successful!", "Exportation Successful!", "OK");
+            }
+        }
+
+        void BuildShaders()
+        {
+            EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneOSX);
+
+            GameObject shaderParent = new GameObject("_Shaders");
+            if (!AssetDatabase.IsValidFolder("Assets/SerializedMaterials"))
+            {
+                AssetDatabase.CreateFolder("Assets", "SerializedMaterials");
+            }
+            for (int i = 0; i < ShaderList.Count; i++)
+            {
+                if (ShaderList.ElementAt(i).Value)
+                {
+                    continue;
+                }
+                var shader = ShaderList.ElementAt(i).Key;
+
+                var mat = new Material(shader);
+
+                AssetDatabase.CreateAsset(mat, "Assets/SerializedMaterials/" + i + ".mat");
+
+                var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                
+                cube.name = i.ToString();
+                cube.transform.SetParent(shaderParent.transform);
+                cube.GetComponent<Renderer>().sharedMaterial = mat;
+            }
+            
+            string shaderFileName = Path.GetFileName("ShaderCache_OSX.DONOTDELETE");
+            string shaderPath = Path.Combine(FolderPath, shaderFileName);
+
+            PrefabUtility.SaveAsPrefabAsset(shaderParent, "Assets/_Shaders.prefab");
+            AssetBundleBuild shaderBundleBuild = default;
+            shaderBundleBuild.assetBundleName = shaderFileName;
+            shaderBundleBuild.assetNames = new string[] {"Assets/_Shaders.prefab"};
+
+            BuildPipeline.BuildAssetBundles(Application.temporaryCachePath,
+                new AssetBundleBuild[] {shaderBundleBuild}, BuildAssetBundleOptions.ForceRebuildAssetBundle,
+                BuildTarget.StandaloneOSX);
+
+            AssetDatabase.DeleteAsset("Assets/_Shaders.prefab");
+
+            if (File.Exists(shaderPath)) File.Delete(shaderPath);
+
+            File.Move(Path.Combine(Application.temporaryCachePath, shaderFileName), shaderPath);
+
+            DestroyImmediate(shaderParent);
+
+            AssetDatabase.DeleteAsset("Assets/SerializedMaterials");
+
+            AssetDatabase.Refresh();
+
+            EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows64);
+        }
+    }
     [CustomEditor(typeof(Camera))]
     public class BackgroundEditor : Editor 
     {
@@ -207,58 +312,14 @@ namespace TrombLoader
 
                         if (filteredShaders.Any())
                         {
-                            activeBuildTarget = BuildTarget.StandaloneOSX;
-                            EditorUserBuildSettings.SwitchActiveBuildTarget(selectedBuildTargetGroup, activeBuildTarget);
-
-                            GameObject shaderParent = new GameObject("_Shaders");
-                            if (!AssetDatabase.IsValidFolder("Assets/SerializedMaterials"))
-                            {
-                                AssetDatabase.CreateFolder("Assets", "SerializedMaterials");
-                            }
-                            for (int i = 0; i < filteredShaders.Count; i++)
-                            {
-                                var shader = filteredShaders[i];
-
-                                var mat = new Material(shader);
-
-                                AssetDatabase.CreateAsset(mat, "Assets/SerializedMaterials/" + i + ".mat");
-
-                                var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                                
-                                cube.name = i.ToString();
-                                cube.transform.SetParent(shaderParent.transform);
-                                cube.GetComponent<Renderer>().sharedMaterial = mat;
-                            }
-                            
-                            string shaderFileName = Path.GetFileName("ShaderCache_OSX.DONOTDELETE");
-                            string shaderPath = Path.Combine(folderPath, shaderFileName);
-
-                            PrefabUtility.SaveAsPrefabAsset(shaderParent, "Assets/_Shaders.prefab");
-                            AssetBundleBuild shaderBundleBuild = default;
-                            shaderBundleBuild.assetBundleName = shaderFileName;
-                            shaderBundleBuild.assetNames = new string[] {"Assets/_Shaders.prefab"};
-
-                            BuildPipeline.BuildAssetBundles(Application.temporaryCachePath,
-                                new AssetBundleBuild[] {shaderBundleBuild}, BuildAssetBundleOptions.ForceRebuildAssetBundle,
-                                activeBuildTarget);
-
-                            AssetDatabase.DeleteAsset("Assets/_Shaders.prefab");
-
-                            if (File.Exists(shaderPath)) File.Delete(shaderPath);
-
-                            File.Move(Path.Combine(Application.temporaryCachePath, shaderFileName), shaderPath);
-
-                            DestroyImmediate(shaderParent);
-
-                            AssetDatabase.DeleteAsset("Assets/SerializedMaterials");
-
-                            AssetDatabase.Refresh();
-
-                            activeBuildTarget = BuildTarget.StandaloneWindows64;
-                            EditorUserBuildSettings.SwitchActiveBuildTarget(selectedBuildTargetGroup, activeBuildTarget);
+                            MacShaderPicker window = CreateInstance<MacShaderPicker>();
+                            window.titleContent = new GUIContent("macOS Shader Bundle Builder");
+                            window.Init(filteredShaders, folderPath);
+                            window.ShowModalUtility();
+                        } else 
+                        {
+                            EditorUtility.DisplayDialog("Exportation Successful!", "Exportation Successful!", "OK");
                         }
-
-                        EditorUtility.DisplayDialog("Exportation Successful!", "Exportation Successful!", "OK");
 
                         if (clonedTromboneBackground != null) DestroyImmediate(clonedTromboneBackground);
 
