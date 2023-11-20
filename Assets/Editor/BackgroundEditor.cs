@@ -12,6 +12,7 @@ namespace TrombLoader
     {
         private Dictionary<Shader, bool> ShaderList = new Dictionary<Shader, bool>();
         private string FolderPath;
+        public bool HasBuilt = false;
 
         Vector2 scrollPosition;
 
@@ -47,11 +48,27 @@ namespace TrombLoader
                 "If you're not sure what to exclude, you can just leave everything selected at the expense of a slightly larger shader bundle."
             );
 
-            if (GUILayout.Button("Build Them Shaders!"))
+            var btnName = "Continue";
+
+            if (ShaderList.ContainsValue(true))
             {
+                btnName = "Build Them Shaders!";
+            } else
+            {
+                btnName = "Continue Without Building Shaders";
+            }
+
+            if (GUILayout.Button(btnName))
+            {
+                // TODO: react when the window is closed by the user
                 this.Close();
-                BuildShaders();
-                EditorUtility.DisplayDialog("Exportation Successful!", "Exportation Successful!", "OK");
+                if (ShaderList.ContainsValue(true))
+                {
+                    BuildShaders();
+                    HasBuilt = true;
+                } else {
+                    HasBuilt = false;
+                }
             }
         }
 
@@ -212,6 +229,40 @@ namespace TrombLoader
                 {
                     if (!string.IsNullOrEmpty(path))
                     {
+                        string fileName = Path.GetFileName(path);
+                        string folderPath = Path.GetDirectoryName(path);
+
+                        // macOS Shader compiling
+                        var shaders = Resources.FindObjectsOfTypeAll<Shader>();
+
+                        var filteredShaders = new List<Shader>();
+
+                        foreach (var shader in shaders)
+                        {
+                            // probably don't need to check for null here but just to be safe
+                            if (shader == null || shader.name == "Standard") continue;
+
+                            if (BaseGameShaderNames.Contains(shader.name) || TrombLoaderShaderNames.Contains(shader.name)) continue;
+
+                            if (filteredShaders.Contains(shader)) continue;
+
+                            if (shader.hideFlags.HasFlag(HideFlags.DontSave) || shader.hideFlags.HasFlag(HideFlags.HideAndDontSave)) continue;
+
+                            Debug.Log($"Found shader {shader.name} to build for macOS");
+                            filteredShaders.Add(shader);
+                        }
+
+                        var macShadersBuilt = true;
+
+                        if (filteredShaders.Any())
+                        {
+                            MacShaderPicker window = CreateInstance<MacShaderPicker>();
+                            window.titleContent = new GUIContent("macOS Shader Bundle Builder");
+                            window.Init(filteredShaders, folderPath);
+                            window.ShowModalUtility();
+                            macShadersBuilt = window.HasBuilt;
+                        }
+
                         clonedTromboneBackground = Instantiate(tromboneBackground.gameObject);
 
                         // serialize
@@ -219,9 +270,6 @@ namespace TrombLoader
                         {
                             manager.SerializeAllGenericEvents();
                         }
-
-                        string fileName = Path.GetFileName(path);
-                        string folderPath = Path.GetDirectoryName(path);
 
                         int serializedCount = 0;
                         // serialize video clips because unity REALLY does not like making them work in assetbundles
@@ -287,35 +335,12 @@ namespace TrombLoader
 
                         AssetDatabase.Refresh();
 
-                        // macOS Shader compiling
-                        var shaders = Resources.FindObjectsOfTypeAll<Shader>();
-
-                        var filteredShaders = new List<Shader>();
-
-                        foreach (var shader in shaders)
-                        {
-                            // probably don't need to check for null here but just to be safe
-                            if (shader == null || shader.name == "Standard") continue;
-
-                            if (BaseGameShaderNames.Contains(shader.name) || TrombLoaderShaderNames.Contains(shader.name)) continue;
-
-                            if (filteredShaders.Contains(shader)) continue;
-
-                            if (shader.hideFlags.HasFlag(HideFlags.DontSave) || shader.hideFlags.HasFlag(HideFlags.HideAndDontSave)) continue;
-
-                            Debug.Log($"Found shader {shader.name} to build for macOS");
-                            filteredShaders.Add(shader);
-                        }
-
-                        if (filteredShaders.Any())
-                        {
-                            MacShaderPicker window = CreateInstance<MacShaderPicker>();
-                            window.titleContent = new GUIContent("macOS Shader Bundle Builder");
-                            window.Init(filteredShaders, folderPath);
-                            window.ShowModalUtility();
-                        } else 
+                        if (macShadersBuilt)
                         {
                             EditorUtility.DisplayDialog("Exportation Successful!", "Exportation Successful!", "OK");
+                        } else
+                        {
+                            EditorUtility.DisplayDialog("Exportation Successful!", "No macOS shaders were built.", "OK");
                         }
 
                         if (clonedTromboneBackground != null) DestroyImmediate(clonedTromboneBackground);
