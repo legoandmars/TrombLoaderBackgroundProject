@@ -6,23 +6,41 @@ using UnityEngine;
 using UnityEngine.Video;
 using TrombLoader.Data;
 
-namespace TrombLoader 
+namespace TrombLoader
 {
     public class MacShaderPicker : EditorWindow
     {
         private Dictionary<Shader, bool> ShaderList = new Dictionary<Shader, bool>();
         private string FolderPath;
         public bool HasBuilt = false;
+        public MacShaderPrefs shaderPrefs;
 
         Vector2 scrollPosition;
 
         public void Init(List<Shader> shaders, string path)
         {
             ShaderList.Clear();
+            shaderPrefs = AssetDatabase.LoadAssetAtPath<MacShaderPrefs>("Assets/Resources/MacShaderPrefs.asset");
+            if (shaderPrefs == null)
+            {
+                shaderPrefs = CreateInstance<MacShaderPrefs>();
+                if (!AssetDatabase.IsValidFolder("Assets/Resources"))
+                {
+                    AssetDatabase.CreateFolder("Assets", "Resources");
+                }
+                AssetDatabase.CreateAsset(shaderPrefs, "Assets/Resources/MacShaderPrefs.asset");
+                AssetDatabase.SaveAssets();
+            }
             foreach (var shader in shaders)
             {
-                // TODO: store the state in a file or something and load from that
-                ShaderList[shader] = true;
+                if (shaderPrefs.blocklist.Contains(shader.name))
+                {
+                    ShaderList[shader] = false;
+                }
+                else
+                {
+                    ShaderList[shader] = true;
+                }
             }
             FolderPath = path;
         }
@@ -48,27 +66,40 @@ namespace TrombLoader
                 "If you're not sure what to exclude, you can just leave everything selected at the expense of a slightly larger shader bundle."
             );
 
-            var btnName = "Continue";
+            string btnName;
 
             if (ShaderList.ContainsValue(true))
             {
                 btnName = "Build Them Shaders!";
-            } else
+            }
+            else
             {
                 btnName = "Continue Without Building Shaders";
             }
 
             if (GUILayout.Button(btnName))
             {
-                // TODO: react when the window is closed by the user
-                this.Close();
+                shaderPrefs.blocklist = new List<string>();
+                foreach(var item in ShaderList)
+                {
+                    if (!item.Value)
+                    {
+                        shaderPrefs.blocklist.Add(item.Key.name);
+                    }
+                }
+
+                AssetDatabase.SaveAssets();
+                
                 if (ShaderList.ContainsValue(true))
                 {
                     BuildShaders();
                     HasBuilt = true;
-                } else {
+                }
+                else
+                {
                     HasBuilt = false;
                 }
+                Close();
             }
         }
 
@@ -259,7 +290,6 @@ namespace TrombLoader
                             MacShaderPicker window = CreateInstance<MacShaderPicker>();
                             window.titleContent = new GUIContent("macOS Shader Bundle Builder");
                             window.Init(filteredShaders, folderPath);
-                            window.ShowModalUtility();
                             macShadersBuilt = window.HasBuilt;
                         }
 
@@ -338,7 +368,8 @@ namespace TrombLoader
                         if (macShadersBuilt)
                         {
                             EditorUtility.DisplayDialog("Exportation Successful!", "Exportation Successful!", "OK");
-                        } else
+                        }
+                        else
                         {
                             EditorUtility.DisplayDialog("Exportation Successful!", "No macOS shaders were built.", "OK");
                         }
