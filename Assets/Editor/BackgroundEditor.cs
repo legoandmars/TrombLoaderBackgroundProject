@@ -133,17 +133,18 @@ namespace TrombLoader
                             filteredShaders.Add(shader);
                         }
 
+                        clonedTromboneBackground = Instantiate(tromboneBackground.gameObject);
+
                         var macShadersBuilt = true;
 
                         if (filteredShaders.Any())
                         {
                             MacShaderPicker window = CreateInstance<MacShaderPicker>();
                             window.titleContent = new GUIContent("macOS Shader Bundle Builder");
-                            window.Init(filteredShaders, folderPath);
+                            window.Init(filteredShaders, folderPath, clonedTromboneBackground);
+                            window.ShowModalUtility();
                             macShadersBuilt = window.HasBuilt;
                         }
-
-                        clonedTromboneBackground = Instantiate(tromboneBackground.gameObject);
 
                         // serialize
                         foreach (var manager in clonedTromboneBackground.gameObject.GetComponentsInChildren<TromboneEventManager>())

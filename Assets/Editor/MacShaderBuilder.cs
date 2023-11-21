@@ -3,7 +3,9 @@ using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
- 
+using UnityEngine.UI;
+using TMPro;
+
  public class MacShaderPicker : EditorWindow
 {
     private Dictionary<Shader, bool> ShaderList = new Dictionary<Shader, bool>();
@@ -12,8 +14,9 @@ using UnityEngine;
     public MacShaderPrefs shaderPrefs;
 
     Vector2 scrollPosition;
+    List<Shader> SceneShaders = new List<Shader>();
 
-    public void Init(List<Shader> shaders, string path)
+    public void Init(List<Shader> shaders, string path, GameObject background)
     {
         ShaderList.Clear();
         shaderPrefs = AssetDatabase.LoadAssetAtPath<MacShaderPrefs>("Assets/Resources/MacShaderPrefs.asset");
@@ -27,15 +30,25 @@ using UnityEngine;
             AssetDatabase.CreateAsset(shaderPrefs, "Assets/Resources/MacShaderPrefs.asset");
             AssetDatabase.SaveAssets();
         }
+
+        CheckScene(background);
+
         foreach (var shader in shaders)
         {
             if (shaderPrefs.blocklist.Contains(shader.name))
             {
+                Debug.Log($"Shader {shader.name} is blocked");
                 ShaderList[shader] = false;
+            }
+            else if (shaderPrefs.allowlist.Contains(shader.name) || SceneShaders.Contains(shader))
+            {
+                Debug.Log($"Shader {shader.name} is allowed");
+                ShaderList[shader] = true;
             }
             else
             {
-                ShaderList[shader] = true;
+                Debug.Log($"Default behaviour for {shader.name}");
+                ShaderList[shader] = false;
             }
         }
         FolderPath = path;
@@ -47,11 +60,22 @@ using UnityEngine;
 
         scrollPosition = GUILayout.BeginScrollView(scrollPosition);
 
+        var style = GUI.skin.GetStyle("Toggle");
+
         for (int i = 0; i < ShaderList.Count; i++)
         {
             var shader = ShaderList.ElementAt(i).Key;
             var active = ShaderList.ElementAt(i).Value;
-            ShaderList[shader] = GUILayout.Toggle(active, shader.name);
+            if (SceneShaders.Contains(shader))
+            {
+                style.fontStyle = FontStyle.Bold;
+            }
+            else
+            {
+                style.fontStyle = FontStyle.Normal;
+                
+            }
+            ShaderList[shader] = GUILayout.Toggle(active, shader.name, style);
         }
 
         GUILayout.EndScrollView();
@@ -59,7 +83,9 @@ using UnityEngine;
         GUILayout.Box(
             "To make sure your background appears correctly on macOS we need to build a bundle containing Mac-compatible shaders. " + 
             "To save on disk space, you can exclude shaders you know you aren't using in your scene. " +
-            "If you're not sure what to exclude, you can just leave everything selected at the expense of a slightly larger shader bundle."
+            "If you're not sure what to exclude, you can just leave everything selected at the expense of a slightly larger shader bundle." +
+            "\n\nShaders that were found within the scene in its current state are highlighted in bold and are selected by default, " +
+            "but this may not include all of the shaders that are used in your project."
         );
 
         string btnName;
@@ -78,7 +104,11 @@ using UnityEngine;
             shaderPrefs.blocklist = new List<string>();
             foreach(var item in ShaderList)
             {
-                if (!item.Value)
+                if (item.Value)
+                {
+                    shaderPrefs.allowlist.Add(item.Key.name);
+                }
+                else
                 {
                     shaderPrefs.blocklist.Add(item.Key.name);
                 }
@@ -96,6 +126,23 @@ using UnityEngine;
                 HasBuilt = false;
             }
             Close();
+        }
+    }
+
+    void CheckScene(GameObject background)
+    {
+        SceneShaders.Clear();
+        
+        var materials = new[]
+        {
+            background.GetComponentsInChildren<Renderer>(true).SelectMany(renderer => renderer.sharedMaterials),
+            background.GetComponentsInChildren<TMP_Text>(true).Select(textMesh => textMesh.fontSharedMaterial),
+            background.GetComponentsInChildren<Graphic>(true).Select(graphics => graphics.material)
+        }.SelectMany(x => x);
+
+        foreach (var material in materials)
+        {
+            SceneShaders.Add(material.shader);
         }
     }
 
