@@ -123,6 +123,10 @@ namespace TrombLoader
                             // probably don't need to check for null here but just to be safe
                             if (shader == null || shader.name == "Standard") continue;
 
+                            // as far as i'm aware Unity doesn't list hidden shaders in the editor UI
+                            // so hopefully excluding them won't break anything
+                            if (shader.name.StartsWith("Hidden/")) continue;
+
                             if (BaseGameShaderNames.Contains(shader.name) || TrombLoaderShaderNames.Contains(shader.name)) continue;
 
                             if (filteredShaders.Contains(shader)) continue;
